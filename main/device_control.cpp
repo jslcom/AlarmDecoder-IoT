@@ -662,7 +662,11 @@ void hal_init_eth(std::string &args)
 
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(4,1,0)
     ESP_ERROR_CHECK(tcpip_adapter_set_default_eth_handlers());
+
+// JSL 12/31/2022
+#if CONFIG_AD2IOT_USE_INTERNAL_ETHERNET
     ESP_ERROR_CHECK(esp_event_handler_register(ETH_EVENT, ESP_EVENT_ANY_ID, &_eth_event_handler, NULL));
+#endif
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, &_got_ip_event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_LOST_IP, &_lost_ip_event_handler, NULL));
 #if CONFIG_LWIP_IPV6
@@ -672,7 +676,10 @@ void hal_init_eth(std::string &args)
     esp_netif_config_t cfg = ESP_NETIF_DEFAULT_ETH();
     _netif = esp_netif_new(&cfg);
     esp_eth_set_default_handlers(_netif);
+// JSL 12/31/2022
+#if CONFIG_AD2IOT_USE_INTERNAL_ETHERNET
     ESP_ERROR_CHECK(esp_event_handler_instance_register(ETH_EVENT, ESP_EVENT_ANY_ID, &_eth_event_handler, NULL, NULL));
+#endif
     ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, &_got_ip_event_handler, NULL, NULL));
     ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_LOST_IP, &_lost_ip_event_handler, NULL, NULL));
 #if CONFIG_LWIP_IPV6
@@ -683,18 +690,25 @@ void hal_init_eth(std::string &args)
     eth_mac_config_t mac_config = ETH_MAC_DEFAULT_CONFIG();
     eth_phy_config_t phy_config = ETH_PHY_DEFAULT_CONFIG();
 
+// Moved this up from below
+// JSL 12/31/2022
+#if CONFIG_AD2IOT_USE_INTERNAL_ETHERNET
     phy_config.phy_addr = CONFIG_AD2IOT_ETH_PHY_ADDR;
     phy_config.reset_gpio_num = CONFIG_AD2IOT_ETH_PHY_RST_GPIO;
     phy_config.reset_timeout_ms = 100;
 
-#if CONFIG_AD2IOT_USE_INTERNAL_ETHERNET
+//#if CONFIG_AD2IOT_USE_INTERNAL_ETHERNET
+// Moved this up from here
+// JSL 12/31/2022
     mac_config.smi_mdc_gpio_num = (gpio_num_t)CONFIG_AD2IOT_ETH_MDC_GPIO;
     mac_config.smi_mdio_gpio_num = (gpio_num_t)CONFIG_AD2IOT_ETH_MDIO_GPIO;
     esp_eth_mac_t *mac = esp_eth_mac_new_esp32(&mac_config);
 #ifdef CONFIG_AD2IOT_ETH_PHY_LAN8720
     esp_eth_phy_t *phy = esp_eth_phy_new_lan8720(&phy_config);
 #endif
-#endif
+//#endif
+// Moved this down from here
+// JSL 12/31/2022
 
     /* Configure the hardware */
     esp_eth_config_t config = ETH_DEFAULT_CONFIG(mac, phy);
@@ -705,6 +719,10 @@ void hal_init_eth(std::string &args)
 #pragma message "No netif in older espidf not using."
 #else
     esp_netif_attach(_netif, esp_eth_new_netif_glue(eth_handle));
+#endif
+
+// Moved this down from above
+// JSL 12/31/2022
 #endif
 
     // test DHCP or Static configuration
@@ -798,7 +816,10 @@ void hal_init_eth(std::string &args)
     } else {
         ESP_LOGI(TAG, "DHCP Mode selected");
     }
+// JSL 12/31/2022
+#if CONFIG_AD2IOT_USE_INTERNAL_ETHERNET
     ESP_ERROR_CHECK(esp_eth_start(eth_handle));
+#endif
     ESP_LOGI(TAG, "ETH hardware init finish");
 
     return;
@@ -1033,9 +1054,12 @@ bool hal_init_sd_card()
     sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
     slot_config.width = 1;
 
-    gpio_set_pull_mode(GPIO_uSD_CMD, GPIO_FLOATING);
-    gpio_set_pull_mode(GPIO_uSD_D0, GPIO_FLOATING);
-    gpio_set_pull_mode(GPIO_uSD_CLK, GPIO_FLOATING);
+// Corrected GPIO initialization for uSD -- Warning: These settings may not work on every platform!
+// JSL 12/31/2022
+    gpio_set_pull_mode(GPIO_uSD_CMD,GPIO_PULLUP_ONLY); 
+    gpio_set_pull_mode(GPIO_uSD_D0, GPIO_PULLUP_ONLY);
+    gpio_set_pull_mode(GPIO_uSD_CLK, GPIO_PULLUP_ONLY);
+    gpio_set_pull_mode(GPIO_uSD_CS, GPIO_PULLUP_ONLY);
 
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {};
     mount_config.format_if_mount_failed = false;
@@ -1045,6 +1069,8 @@ bool hal_init_sd_card()
     sdmmc_card_t *card = NULL;
     err = esp_vfs_fat_sdmmc_mount(mount_point, &host, &slot_config, &mount_config, &card);
     if (err != ESP_OK) {
+//JSL 12/31/2022
+        ad2_printf_host(true, "Failed to mount uSD err: 0x%x (%s).", err, esp_err_to_name(err));
         ESP_LOGE(TAG, "Failed to mount uSD err: 0x%x (%s).", err, esp_err_to_name(err));
         ad2_printf_host(false, " fail.");
         return false;

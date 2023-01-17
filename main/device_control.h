@@ -68,10 +68,14 @@
 
 // OLIMEX ESP-POE*
 /// uSD
+// Changed defaults to work with uSD card attached to Rakstore ESP32-DevKitC Development Board WROOM-32U ESP32-WROOM-32U Module https://www.amazon.com/gp/product/B09BM1QW29
+// Warning: These settings may not work for every platform!
+// JSL - 12/31/2022
 #define GPIO_uSD_CLK GPIO_NUM_14   // CLK/SCLK - HS2_CLK
 #define GPIO_uSD_CMD GPIO_NUM_15   // CMD/DI - MOSI
 #define GPIO_uSD_D0 GPIO_NUM_2     // DAT0/DO - HS2_DATA0 MISO
-#define GPIO_uSD_CS GPIO_NOT_USED  // N/A tie to open pin for now :(
+//#define GPIO_uSD_CS GPIO_NOT_USED  // N/A tie to open pin for now :(
+#define GPIO_uSD_CS GPIO_NUM_13    // Chip Select - CS
 /// LAN8710A
 #define GPIO_ETH_PHY_POWER GPIO_NUM_12
 #define GPIO_ETH_PHY_MODE0 GPIO_NUM_25
